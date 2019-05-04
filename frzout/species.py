@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import pkgutil
+import re
+import os.path
+import sys
 
 __all__ = ['species_dict']
 
@@ -15,6 +18,38 @@ def _nth_digit(i, n):
 
     """
     return (i // 10**n) % 10
+
+# Inspired by https://github.com/smash-transport/smash/blob/master/src/pdgcode.cc
+def get_absolute_hadron_charge(pID):
+
+    n, n_r, n_L, n_q1, n_q2, n_q3, n_J = [_nth_digit(pID, n) for n in range(6,-1, -1)]
+
+    quark_list=[n_q1, n_q2, n_q3]
+
+    Q=0
+    # Meson
+    if (n_q1 == 0):
+        Q1=(3*(n_q2%2) - 1)
+        Q2=-1*(3*(n_q3%2) - 1)
+        Q=Q1+Q2
+    # Baryon
+    else:
+        for q in quark_list:
+
+            if (q == 0):
+                continue
+
+            if (q%2 == 0):
+                Q+=2
+            else: 
+                Q+=-1
+
+    assert(Q%3 == 0), "Problem computing charge."
+
+    Q/=-3
+
+    return int(abs(Q))
+
 
 
 def _mass_range(name, mass, width, degen, boson):
@@ -116,26 +151,32 @@ def _mass_range(name, mass, width, degen, boson):
 
 def _read_particle_data():
     """
-    Parse particle data from the PDG table.
+    Parse particle data from SMASH's particle table.
 
     Yields pairs (ID, data) where ID is the Monte Carlo ID number and data is a
     dict of properties.
 
     """
-    charge_codes = {
-        b'-' : -1,
-        b'0' :  0,
-        b'+' :  1,
-        b'++':  2,
-    }
+    #with open('./particles.txt', 'r') as f:
+    d = os.path.dirname(sys.modules['frzout'].__file__)
+    with open(os.path.join(d, 'particles.txt'), 'r') as f:
 
-    for l in pkgutil.get_data('frzout', 'mass_width_2017.mcd').splitlines():
+        raw_info = f.readlines()
+
+    for l in raw_info:
+
         # skip comments
-        if l.startswith(b'*'):
+        if l.startswith('#') or l.isspace():
             continue
 
-        # extract particle IDs (possibly multiple on a line)
-        IDs = [int(i) for i in l[:32].split()]
+        l=re.search('^([^#]*?)(#+.*|$)\n', l).group(1)
+
+        # Tokenize
+        rname, rmass, rwidth, rparity, *rIDs=re.split(r'\s+', l.strip())
+
+        # Extract particle IDs (possibly multiple on a line)
+        IDs = [int(i) for i in rIDs]
+
 
         # skip elementary particles
         if IDs[0] < 100:
@@ -156,14 +197,14 @@ def _read_particle_data():
             continue
 
         # extract rest of data
-        mass = float(l[33:50])
+        mass = float(rmass)
         try:
-            width = float(l[70:87])
+            width = float(rwidth)
         except ValueError:
             width = 0.
-        name, charges = l[107:].split()
-        name = name.strip().decode()
-        charges = [charge_codes[i] for i in charges.split(b',')]
+        name = str(rname)
+        name = name.strip()
+        charges = [get_absolute_hadron_charge(ID) for ID in IDs]
 
         assert len(IDs) == len(charges)
 
@@ -176,8 +217,8 @@ def _read_particle_data():
         )
 
         # determine mass thresholds for resonances
-        if width > 1e-3:
-            base_data.update(mass_range=_mass_range(**base_data))
+        #if width > 1e-3:
+        #    base_data.update(mass_range=_mass_range(**base_data))
 
         # yield an entry for each (ID, charge) pair
         for ID, charge in zip(IDs, charges):
@@ -231,10 +272,6 @@ def _normalize_species(species='all'):
     def species_items():
         if species == 'all':
             return species_dict.items()
-        elif species == 'id':
-            return ((i, species_dict[i]) for i in identified)
-        elif species == 'urqmd':
-            return ((i, species_dict[i]) for i in urqmd)
         else:
             def items_gen():
                 for ID in species:
