@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# https://github.com/mrhheffernan/frzout-for-eos
 
 import os.path
 from setuptools import setup, Extension
 
 
 def version():
-    with open('frzout/__init__.py', 'r') as f:
+    with open('frzout_for_eos/__init__.py', 'r') as f:
         for l in f:
             if l.startswith('__version__ = '):
                 return l.split("'")[1]
@@ -23,12 +24,12 @@ def ext_modules():
     def module_list(ext):
         return [
             Extension(
-                'frzout._frzout',
-                ['frzout/_frzout.' + ext],
+                'frzout_for_eos._frzout',
+                ['frzout_for_eos/_frzout.' + ext],
             ),
             Extension(
-                'frzout.test._test_fourvec',
-                ['frzout/test/_test_fourvec.' + ext],
+                'frzout_for_eos.test._test_fourvec',
+                ['frzout_for_eos/test/_test_fourvec.' + ext],
                 include_dirs=['frzout']
             )
         ]
@@ -57,7 +58,7 @@ setup(
     author_email='jonah.bernhard@gmail.com',
     url='https://github.com/Duke-QCD/frzout',
     license='MIT',
-    packages=['frzout_for_eos', 'frzout.test'],
+    packages=['frzout_for_eos', 'frzout_for_eos.test'],
     package_data={'frzout_for_eos': ['mass_width_2017.mcd']},
     ext_modules=ext_modules(),
     install_requires=['numpy', 'scipy >= 0.18.0'],
