@@ -49,7 +49,7 @@ def ext_modules():
 
 
 setup(
-    name='frzout',
+    name='frzout_for_eos',
     version=version(),
     description='Particlization model for relativistic heavy-ion collisions',
     long_description=long_description(),
@@ -57,8 +57,8 @@ setup(
     author_email='jonah.bernhard@gmail.com',
     url='https://github.com/Duke-QCD/frzout',
     license='MIT',
-    packages=['frzout', 'frzout.test'],
-    package_data={'frzout': ['mass_width_2017.mcd']},
+    packages=['frzout_for_eos', 'frzout.test'],
+    package_data={'frzout_for_eos': ['mass_width_2017.mcd']},
     ext_modules=ext_modules(),
     install_requires=['numpy', 'scipy >= 0.18.0'],
     classifiers=[
